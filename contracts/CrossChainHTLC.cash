@@ -1,0 +1,61 @@
+pragma cashscript ^0.12.0;
+
+// =============================================================================
+// CrossChainHTLC — Hash Time Locked Contract for BCH <-> Movement/Solana swaps
+// =============================================================================
+//
+// Mirrors the Movement `htlc_escrow.move` and Solana `intent-swap` HTLC logic.
+//
+// Flow (BCH as Source — user sells BCH):
+//   1. User generates secret S, computes H = sha256(S)
+//   2. User locks BCH/CashTokens in this covenant with H and a timelock
+//   3. Solver pays the user on the destination chain (Movement/Solana) using H
+//   4. User reveals S on the destination chain to claim
+//   5. Solver sees S on-chain and claims BCH from this covenant
+//   6. If solver doesn't claim before timelock, user refunds
+//
+// Flow (BCH as Target — solver pays in BCH):
+//   1. Intent created on source chain (Movement) with hash H
+//   2. Solver locks BCH in this covenant with H and a shorter timelock
+//   3. User reveals S to claim the BCH
+//   4. Solver uses S to claim on the source chain
+//   5. If user doesn't claim before timelock, solver refunds
+
+contract CrossChainHTLC(
+    // Sender's public key hash (who locks the funds — could be user or solver)
+    bytes20 senderPkh,
+    // Recipient's public key hash (who can claim with the secret)
+    bytes20 recipientPkh,
+    // SHA-256 hash of the secret (32 bytes)
+    bytes32 secretHash,
+    // Unix timestamp when the HTLC expires
+    int timelock
+) {
+    // =========================================================================
+    // claim() — Recipient claims by revealing the preimage (secret)
+    // =========================================================================
+    function claim(pubkey recipientPk, sig recipientSig, bytes32 secret) {
+        // 1. Verify the recipient's identity
+        require(hash160(recipientPk) == recipientPkh);
+        require(checkSig(recipientSig, recipientPk));
+
+        // 2. Verify the secret matches the hash (HTLC core logic)
+        require(sha256(secret) == secretHash);
+
+        // Note: No covenant restrictions on outputs — recipient can send funds
+        // wherever they want. The secret reveal IS the proof of claim.
+        // The relayer watches for the secret in the spending transaction.
+    }
+
+    // =========================================================================
+    // refund() — Sender reclaims funds after the timelock expires
+    // =========================================================================
+    function refund(pubkey senderPk, sig senderSig) {
+        // 1. Verify the sender's identity
+        require(hash160(senderPk) == senderPkh);
+        require(checkSig(senderSig, senderPk));
+
+        // 2. Enforce that the timelock has passed
+        require(tx.time >= timelock);
+    }
+}

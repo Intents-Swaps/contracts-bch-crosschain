@@ -1,0 +1,19 @@
+{
+    "name": "intent-protocol-bch-crosschain",
+    "version": "1.0.0",
+    "description": "Cross-chain HTLC contracts for BCH <-> Movement/Solana atomic swaps",
+    "type": "module",
+    "scripts": {
+        "build": "cashc contracts/CrossChainHTLC.cash -o artifacts/CrossChainHTLC.json",
+        "test": "tsx test/CrossChainHTLC.test.ts",
+        "test:all": "tsx test/CrossChainHTLC.test.ts"
+    },
+    "dependencies": {
+        "cashscript": "^0.10.0",
+        "electrum-cash": "^2.0.10"
+    },
+    "devDependencies": {
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3"
+    }
+}
