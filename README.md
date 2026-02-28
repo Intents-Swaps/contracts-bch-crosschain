@@ -1,8 +1,55 @@
-# 🔀 Intents Swap: BCH Cross-Chain HTLC Contracts
+# 🔀 Intents-Swaps: Cross-Chain BCH Smart Contracts
 
-Welcome to the **BCH Cross-Chain** smart contract repository for the Intents Swap protocol! 
+[![Reviewers Guide](https://img.shields.io/badge/docs-Reviewers_Guide-blue)](../docs/reviewers-guide/01-protocol-overview.md)
+[![License: All Rights Reserved](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](#license)
 
-This repository contains the core **CashScript** smart contracts that enable **100% trustless, atomic cross-chain swaps** between Bitcoin Cash (UTXO) and account-based chains like Solana and Movement (EVM/Move).
+This repository contains the core **Bitcoin Cash (BCH) smart contracts** utilized by the BCH Intents protocol for **Cross-Chain Atomic Swaps** (e.g., SOL -> BCH or MOVE -> BCH).
+
+These contracts are written in [CashScript](https://cashscript.org/) and function as UTXO covenants, enforcing stateless cryptographic guarantees that allow users and **Decentralized Resolvers** to trade across distinct blockchain networks without a trusted intermediary.
+
+### Related Repositories
+This is part of the broader Cross-Chain architecture. It works directly in tandem with:
+* **[contracts-solana](../contracts-solana)**: The Solana Target-Chain Anchor programs.
+* **[contract-movement-cross-chain](../contract-movement-cross-chain)**: The Movement Target-Chain MoveVM contracts.
+* **[bch-solana-relayer](../bch-solana-relayer)**: The off-chain Node.js Decentralized Resolver that fulfills the swaps.
+
+## Core Contract: `CrossChainHTLC.cash`
+
+The primary contract is a **Hash Time-Locked Contract (HTLC)**. 
+
+### How It Works
+
+```mermaid
+sequenceDiagram
+    participant User as User (Solana/Move Wallet)
+    participant Resolver as Resolver Node
+    participant Dest as Dest Chain (This Repo - BCH)
+    participant Source as Source Chain (SOL/MOVE)
+
+    User->>Source: Locks funds with Hashlock H(S)
+    Source-->>Resolver: Emits Lock Event
+    Resolver->>Dest: Locks BCH into UTXO HTLC with same H(S)
+    User->>Dest: Claims BCH with Secret (S)
+    Resolver->>Dest: Observes S on BCH Ledger
+    Resolver->>Source: Claims User's locked funds with S
+```
+
+1. **The Hashlock**: A Decentralized Resolver (Maker) locks BCH into this contract using a cryptographic hash `H(S)` provided by the User. 
+2. **The Timelock**: The contract enforces a strict time-to-live (`T`).
+3. **The Claim**: The User (Taker) can only unlock and claim the BCH if they reveal the original pre-image secret `S`. Once exposed on the BCH ledger, the Resolver reads `S` and claims the User's funds on the opposing chain.
+4. **The Refund**: If the User abandons the swap and never reveals `S`, the Resolver can cleanly refund their BCH back to their wallet after `T` expires.
+
+### Security & Review Focus
+Reviewers examining this repository should focus on:
+* **Delta Timelocks**: Understanding why the Relayer's timelock on BCH (`T/2`) must be strictly less than the User's timelock on the source chain (`T`).
+* **CashScript Opcodes**: Ensure `REQUIRE(tx.time >= timelock)` prevents premature refunds.
+* **Signature Verification**: Ensure the `maker` and `taker` signatures cannot be forged or bypassed during the `claim` and `refund` functions.
+
+---
+
+### Navigation
+* 📖 Read the detailed **[Atomic Swaps Reviewer Guide](../docs/reviewers-guide/02-cross-chain-atomic-swaps.md)** for sequence diagrams.
+* 💻 Run local tests: `npm run test`
 
 ---
 
@@ -95,9 +142,14 @@ The test script (`test/CrossChainHTLC.test.ts`) runs through 5 distinct validati
 When talking about this implementation, highlight these technical achievements:
 
 1. **State on a Stateless Chain**: We map complex cross-chain state machines onto BCH's UTXO model by baking the state into the covenant's constructor parameters.
-2. **True Decentralization**: There is no "admin key" or "relayer multisig". The relayers in our ecosystem only observe and pass data; they cannot steal funds because they cannot fake the SHA-256 secret.
-3. **Future-Proofing (2026 Upgrades)**: Connect this implementation to the upcoming May 2026 BCH VM upgrades. While we do this securely today with linear paths, the upcoming `OP_BEGIN/OP_UNTIL` and `OP_Invoke` will allow us to compress this logic and do multi-hop verifications natively on-chain. 
+2. **True Decentralization**: There is no "admin key" or "relayer multisig". The Decentralized Resolvers in our ecosystem only observe and pass data; they cannot steal funds because they cannot fake the SHA-256 secret.
+3. **Future-Proofing (2026 STARK Upgrades)**: Connect this implementation to the upcoming 2026 BCH VM upgrades. While we do this securely today with HTLCs, the upcoming `OP_BEGIN/OP_UNTIL` and **Triton VM STARK verifiers** will allow us to compress this logic and do fully asynchronous, zero-knowledge verification directly on-chain.
 
 ---
+
+## 📜 License
+
+**Copyright (c) 2026 Intents-Swaps. All Rights Reserved.**
+This software and associated documentation files are proprietary and confidential. No part of this repository may be copied, reproduced, distributed, or modified without explicit written permission.
 
 *Part of the Intents Swap Protocol Ecosystem — Bringing Intent-based DeFi to Bitcoin Cash.*
