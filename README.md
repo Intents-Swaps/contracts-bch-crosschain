@@ -53,9 +53,7 @@ Reviewers examining this repository should focus on:
 
 ---
 
-## 📖 DevRel Overview
-
-If you are explaining this architecture to developers, the core primitive you need to focus on is the **Hashed Time-Lock Contract (HTLC)**. 
+## 📖  Overview
 
 Unlike traditional centralized bridges or federated multisig wrappers (which introduce custodial risk), our cross-chain architecture relies purely on **cryptographic primitives** and **Bitcoin Script**.
 
@@ -137,9 +135,7 @@ The test script (`test/CrossChainHTLC.test.ts`) runs through 5 distinct validati
 
 ---
 
-## 🧠 Talking Points for Hackathons & Interviews
-
-When talking about this implementation, highlight these technical achievements:
+## 🧠 technical achievements
 
 1. **State on a Stateless Chain**: We map complex cross-chain state machines onto BCH's UTXO model by baking the state into the covenant's constructor parameters.
 2. **True Decentralization**: There is no "admin key" or "relayer multisig". The Decentralized Resolvers in our ecosystem only observe and pass data; they cannot steal funds because they cannot fake the SHA-256 secret.
